@@ -59,6 +59,10 @@ public class KafkaProducerExample {
             // Thread.sleep(1);
         }
 
+        if(limit[0] > 0) {
+            logger.info("last batch: {} messages produced", limit[0]);
+        }
+
         // Send the shutdown signal
         ProducerRecord<String, String> shutdownRecord = new ProducerRecord<>("sample-stream",
                 "SHUTDOWN", "SHUTDOWN");
@@ -67,9 +71,6 @@ public class KafkaProducerExample {
             if (exception != null) {
                 logger.error("Failed to deliver shutdown message: {}", exception.getMessage());
             } else {
-                if(limit[0] > 0) {
-                    logger.info("{} messages produced", limit[0]);
-                }
                 logger.info("Shutdown message produced: {}", metadata.toString());
             }
         });
