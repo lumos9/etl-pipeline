@@ -1,0 +1,87 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+}
+
+application {
+    mainClassName = 'org.example.Main'
+    applicationDefaultJvmArgs = [
+            '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.io=ALL-UNNAMED',
+            '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED'
+    ]
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'org.example.Main'
+        )
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+
+    implementation 'org.apache.kafka:kafka-clients:3.4.0' // Adjust the version as needed
+
+    // Flink dependencies
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-connector-kafka
+    implementation 'org.apache.flink:flink-connector-kafka:3.1.0-1.18'
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-streaming-java
+    implementation 'org.apache.flink:flink-streaming-java:1.19.0'
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-core
+    implementation 'org.apache.flink:flink-core:1.19.0'
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-connector-base
+    implementation 'org.apache.flink:flink-connector-base:1.19.0'
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-runtime
+    testImplementation 'org.apache.flink:flink-runtime:1.19.0'
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-clients
+    implementation 'org.apache.flink:flink-clients:1.19.0'
+    implementation 'org.apache.flink:flink-java:1.19.0'
+
+    // https://mvnrepository.com/artifact/com.mchange/c3p0
+    implementation 'com.mchange:c3p0:0.10.1'
+
+    // https://mvnrepository.com/artifact/com.amazon.redshift/redshift-jdbc42
+    implementation 'com.amazon.redshift:redshift-jdbc42:2.1.0.28'
+
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    implementation 'org.slf4j:slf4j-api:2.0.13'
+    // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
+    implementation 'org.apache.logging.log4j:log4j-core:2.23.1'
+    // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api
+    implementation 'org.apache.logging.log4j:log4j-api:2.23.1'
+    // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j2-impl
+    testImplementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.23.1'
+
+
+    // Exclude other SLF4J bindings if necessary
+    configurations.configureEach {
+        exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+        exclude group: 'ch.qos.logback', module: 'logback-classic'
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+shadowJar {
+    archiveBaseName.set('app')
+    archiveVersion.set('1.0')
+    archiveClassifier.set('')
+}
