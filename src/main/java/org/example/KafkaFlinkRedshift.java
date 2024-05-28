@@ -47,35 +47,16 @@ public class KafkaFlinkRedshift {
                 return value;
             })
             .process(new KeyedProcessFunction<>() {
-                private transient ValueState<Boolean> shutdownState;
-
-                @Override
-                public void open(Configuration parameters) throws Exception {
-                    ValueStateDescriptor<Boolean> shutdownDescriptor = new ValueStateDescriptor<>("shutdownState", Boolean.class);
-                    shutdownState = getRuntimeContext().getState(shutdownDescriptor);
-                }
 
                 @Override
                 public void processElement(String value, Context ctx, Collector<String> out) throws Exception {
-                    if ("SHUTDOWN".equalsIgnoreCase(value)) {
-                        shutdownState.update(true);
-                    } else {
-                        out.collect(value);
-                    }
+                    out.collect(value);
                     //logger.info("received: '{}'", value);
-                }
-
-                @Override
-                public void close() throws Exception {
-                    if (shutdownState.value() != null && shutdownState.value()) {
-                        logger.info("Final shutdown check");
-                    }
-                    super.close();
                 }
             });
 
         // Sink the processed stream to a Redshift sink (replace with your actual sink)
-        processedStream.addSink(new LoggingSink<>()).setParallelism(1);
+        processedStream.addSink(new RedshiftSinkBatchAsync());
 
         // Execute the Flink job
         env.execute("Kafka to Flink to Redshift");
