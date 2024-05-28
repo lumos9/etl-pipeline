@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
     private static final Logger logger = LogManager.getLogger(RedshiftSinkBatchAsync.class);
@@ -19,6 +20,8 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
     private transient ComboPooledDataSource dataSource;
     private transient List<String> buffer;
     private static final int BATCH_SIZE = 1000;
+
+    private transient CountDownLatch shutdownLatch;
 
     @Override
     public void open(Configuration parameters) throws Exception {
@@ -34,40 +37,47 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
         dataSource.setMaxStatements(100);
 
         buffer = new ArrayList<>();
+        shutdownLatch = new CountDownLatch(1);
     }
 
     @Override
     public void invoke(String value, SinkFunction.Context context) throws Exception {
-        if ("SHUTDOWN".equalsIgnoreCase(value)) {
-            logger.info("Shutdown signal received. Flushing remaining records...");
-            flush();
-        } else {
-            buffer.add(value);
-            if (buffer.size() >= BATCH_SIZE) {
+        synchronized (this) {
+            if ("SHUTDOWN".equalsIgnoreCase(value)) {
+                logger.info("Shutdown signal received. Flushing remaining records...");
                 flush();
+                shutdownLatch.countDown();
+            } else {
+                buffer.add(value);
+                if (buffer.size() >= BATCH_SIZE) {
+                    flush();
+                }
             }
         }
     }
 
     @Override
     public void close() throws Exception {
-        logger.info("about to close sink...");
-        if (!buffer.isEmpty()) {
-            logger.info("Loading last batch...");
-            flush();
-        }
-        if (dataSource != null) {
-            dataSource.close();
+        logger.info("Waiting for shutdown latch / signal...");
+        shutdownLatch.await();
+        synchronized (this) {
+            if (!buffer.isEmpty()) {
+                logger.info("Loading last batch...");
+                flush();
+            }
+            if (dataSource != null) {
+                dataSource.close();
+            }
         }
         super.close();
     }
 
     private void flush() throws Exception {
-        logger.info("Attempting to load batch with size: {}", buffer.size());
         if (!buffer.isEmpty()) {
+            logger.info("Attempting to load batch with size: {}", buffer.size());
             pretendLoad();
             buffer.clear();
-            logger.info("loaded");
+            logger.info("Loaded");
         } else {
             logger.info("Nothing to load. Batch is empty");
         }

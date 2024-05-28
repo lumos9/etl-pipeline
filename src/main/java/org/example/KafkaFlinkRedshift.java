@@ -27,7 +27,7 @@ public class KafkaFlinkRedshift {
         // Set up the execution environment
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        KafkaSource<String> source = KafkaSource.<String>builder()
+        KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
                 .setBootstrapServers("localhost:9092")
                 .setTopics("sample-stream")
                 .setGroupId("flink-consumer-group")
@@ -36,27 +36,10 @@ public class KafkaFlinkRedshift {
                 .build();
 
         // Add the consumer to the environment
-        DataStream<String> stream = env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source");
-
-        // Process data and check for shutdown signal
-        DataStream<String> processedStream = stream
-            .keyBy(value -> {
-                if (value.split(",").length >= 2) {
-                    return value.split(",")[1];
-                }
-                return value;
-            })
-            .process(new KeyedProcessFunction<>() {
-
-                @Override
-                public void processElement(String value, Context ctx, Collector<String> out) throws Exception {
-                    out.collect(value);
-                    //logger.info("received: '{}'", value);
-                }
-            });
+        DataStream<String> stream = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source");
 
         // Sink the processed stream to a Redshift sink (replace with your actual sink)
-        processedStream.addSink(new RedshiftSinkBatchAsync());
+        stream.addSink(new RedshiftSinkBatchAsync()).name("Amazon Redshift");
 
         // Execute the Flink job
         env.execute("Kafka to Flink to Redshift");
