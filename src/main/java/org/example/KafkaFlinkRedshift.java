@@ -15,8 +15,12 @@ import org.apache.flink.util.Collector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class KafkaFlinkRedshift {
     private static final Logger logger = LogManager.getLogger(KafkaFlinkRedshift.class);
+    private static final int BATCH_SIZE = 1000;
 
     public static void main(String[] args) throws Exception {
         logger.info("Starting Kafka Consumer...");
@@ -31,112 +35,74 @@ public class KafkaFlinkRedshift {
                 .setValueOnlyDeserializer(new SimpleStringSchema())
                 .build();
 
-        //env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source");
-
         // Add the consumer to the environment
         DataStream<String> stream = env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source");
-
-        // Transformation: Split CSV and apply transformation
-//        DataStream<String> transformedStream = stream.map((MapFunction<String, String>) value -> {
-//            String[] fields = value.split(",");
-//            int id = Integer.parseInt(fields[0]);
-//            String name = fields[1].toUpperCase();
-//            String newValue = fields[2] + "_transformed";
-//            return id + "," + name + "," + newValue;
-//        });
 
         // Process data and check for shutdown signal
         DataStream<String> processedStream = stream
                 .keyBy(value -> {
-                   if(value.split(",").length >= 2) {
-                       return value.split(",")[1];
-                   }
-                   return value;
+                    if (value.split(",").length >= 2) {
+                        return value.split(",")[1];
+                    }
+                    return value;
                 })
                 .process(new KeyedProcessFunction<>() {
-
                     private transient ValueState<Boolean> shutdownState;
-                    private transient ValueState<Long> messageCountState;
-                    private static final long CHECK_INTERVAL = 60000; // 60 seconds
+                    private transient List<String> buffer;
 
                     @Override
                     public void open(Configuration parameters) throws Exception {
-                        ValueStateDescriptor<Boolean> descriptor = new ValueStateDescriptor<>("shutdownState",
-                                Boolean.class);
-                        shutdownState = getRuntimeContext().getState(descriptor);
+                        ValueStateDescriptor<Boolean> shutdownDescriptor = new ValueStateDescriptor<>("shutdownState", Boolean.class);
+                        shutdownState = getRuntimeContext().getState(shutdownDescriptor);
 
-                        ValueStateDescriptor<Long> messageCountDescriptor = new ValueStateDescriptor<>("messageCountState", Long.class);
-                        messageCountState = getRuntimeContext().getState(messageCountDescriptor);
-
-                        // Set a timer to periodically check the shutdown state and log the message count
-                        //long currentTime = getRuntimeContext()..getCurrentProcessingTime();
-                        //getRuntimeContext().getProcessingTimeService().registerProcessingTimeTimer(currentTime + CHECK_INTERVAL);
+                        buffer = new ArrayList<>();
                     }
 
                     @Override
                     public void processElement(String value, Context ctx, Collector<String> out) throws Exception {
-                        Long currentCount = messageCountState.value();
-                        if (currentCount == null) {
-                            currentCount = 0L;
-                        }
-                        messageCountState.update(currentCount + 1);
-
-                        if ("SHUTDOWN".equals(value)) {
+                        if ("SHUTDOWN".equalsIgnoreCase(value)) {
                             shutdownState.update(true);
                         } else {
-                            if(value.split(",").length >= 4) {
-                                String[] fields = value.split(",");
-                                int index = Integer.parseInt(fields[0]);
-                                long id = Long.parseLong(fields[1]);
-                                String name = fields[2].toUpperCase();
-                                String newValue = fields[3] + "_transformed";
-                                out.collect(index + "," + id + "," + name + "," + newValue);
-                            } else {
-                                out.collect(value);
-                            }
+                            out.collect(value);
                         }
+                        logger.info("received: '{}'", value);
                     }
 
-                    @Override
-                    public void onTimer(long timestamp, OnTimerContext ctx, Collector<String> out) throws Exception {
-                        // Log the message count periodically
-                        Long currentCount = messageCountState.value();
-                        if (currentCount != null) {
-                            logger.info("Current message count: {}", currentCount);
-                        }
-
-                        // Check the shutdown state
-                        if (shutdownState.value() != null && shutdownState.value()) {
-                            // Trigger job cancellation or other shutdown logic
-                            logger.info("Shutdown signal received. Shutting down...");
-                            // ctx.getExecutionEnvironment().cancel(); // Uncomment if you have a reference to the execution environment
+                    private void submitBatch(Collector<String> out) {
+                        if (out != null) {
+                            for (String record : buffer) {
+                                out.collect(record);
+                            }
                         } else {
-                            // Register the next timer
-                            long currentTime = ctx.timerService().currentProcessingTime();
-                            ctx.timerService().registerProcessingTimeTimer(currentTime + CHECK_INTERVAL);
+                            // Handle the case where out is null (e.g., when called from close())
+                            // Typically, you would forward the records to the sink directly
+                            for (String record : buffer) {
+                                // Implement the logic to send the record to the sink
+                                // For example, you might use an internal method to handle this:
+                                sendRecordToSink(record);
+                            }
                         }
+                        buffer.clear();
+                    }
+
+                    private void sendRecordToSink(String record) {
+                        // Implement the logic to send the record to the sink
+                        // This could be done using a sink function or directly using a Redshift connection
+                        // For demonstration, just log the record
+                        logger.info("Sending record to sink: {}", record);
                     }
 
                     @Override
                     public void close() throws Exception {
                         if (shutdownState.value() != null && shutdownState.value()) {
-                            // Trigger job cancellation or other shutdown logic
-                            // For example, stopping the execution environment
-                            logger.info("Final shutdown check. Total messages processed: {}",
-                                    messageCountState.value());
-                            // ctx.getExecutionEnvironment().cancel(); // Uncomment if you have a reference to the execution environment
+                            logger.info("Final shutdown check");
                         }
                         super.close();
                     }
                 });
 
-        // Here, you can sink the transformed stream to Amazon Redshift
-        // For simplicity, this example will just print the transformed records
-        //transformedStream.print();
-        //processedStream.addSink(new LoggingSink<>()).setParallelism(1);
-        processedStream.addSink(new RedshiftSinkBatchAsync()).setParallelism(1);
-        ///Add another sink
-        //transformedStream.addSink(new RedshiftSink());
+        // Sink the processed stream to a Redshift sink (replace with your actual sink)
+        processedStream.addSink(new LoggingSink<>()).setParallelism(1);
 
         // Execute the Flink job
         env.execute("Kafka to Flink to Redshift");
