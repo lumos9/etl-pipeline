@@ -16,7 +16,8 @@ application {
     applicationDefaultJvmArgs = [
             '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
             '--add-opens', 'java.base/java.io=ALL-UNNAMED',
-            '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED'
+            '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.util=ALL-UNNAMED'
     ]
 }
 
@@ -52,6 +53,13 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.flink/flink-clients
     implementation 'org.apache.flink:flink-clients:1.19.0'
     implementation 'org.apache.flink:flink-java:1.19.0'
+    // https://mvnrepository.com/artifact/com.twitter/chill
+    implementation 'com.twitter:chill_2.13:0.10.0'
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-avro
+    implementation 'org.apache.flink:flink-avro:1.19.0'
+    // https://mvnrepository.com/artifact/org.apache.avro/avro
+    implementation 'org.apache.avro:avro:1.11.3'
+
 
     // https://mvnrepository.com/artifact/com.mchange/c3p0
     implementation 'com.mchange:c3p0:0.10.1'
