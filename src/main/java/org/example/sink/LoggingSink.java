@@ -1,4 +1,4 @@
-package org.example;
+package org.example.sink;
 
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.logging.log4j.LogManager;

@@ -1,4 +1,4 @@
-package org.example;
+package org.example.sink;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import org.apache.flink.configuration.Configuration;

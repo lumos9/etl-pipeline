@@ -2,4 +2,4 @@
 
 ./check-setup.sh
 
-java -cp build/libs/app-1.0.jar org.example.KafkaProducerExample
+java -cp build/libs/app-1.0.jar org.example.source.KafkaProducerExample
