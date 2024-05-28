@@ -40,66 +40,39 @@ public class KafkaFlinkRedshift {
 
         // Process data and check for shutdown signal
         DataStream<String> processedStream = stream
-                .keyBy(value -> {
-                    if (value.split(",").length >= 2) {
-                        return value.split(",")[1];
-                    }
-                    return value;
-                })
-                .process(new KeyedProcessFunction<>() {
-                    private transient ValueState<Boolean> shutdownState;
-                    private transient List<String> buffer;
+            .keyBy(value -> {
+                if (value.split(",").length >= 2) {
+                    return value.split(",")[1];
+                }
+                return value;
+            })
+            .process(new KeyedProcessFunction<>() {
+                private transient ValueState<Boolean> shutdownState;
 
-                    @Override
-                    public void open(Configuration parameters) throws Exception {
-                        ValueStateDescriptor<Boolean> shutdownDescriptor = new ValueStateDescriptor<>("shutdownState", Boolean.class);
-                        shutdownState = getRuntimeContext().getState(shutdownDescriptor);
+                @Override
+                public void open(Configuration parameters) throws Exception {
+                    ValueStateDescriptor<Boolean> shutdownDescriptor = new ValueStateDescriptor<>("shutdownState", Boolean.class);
+                    shutdownState = getRuntimeContext().getState(shutdownDescriptor);
+                }
 
-                        buffer = new ArrayList<>();
+                @Override
+                public void processElement(String value, Context ctx, Collector<String> out) throws Exception {
+                    if ("SHUTDOWN".equalsIgnoreCase(value)) {
+                        shutdownState.update(true);
+                    } else {
+                        out.collect(value);
                     }
+                    //logger.info("received: '{}'", value);
+                }
 
-                    @Override
-                    public void processElement(String value, Context ctx, Collector<String> out) throws Exception {
-                        if ("SHUTDOWN".equalsIgnoreCase(value)) {
-                            shutdownState.update(true);
-                        } else {
-                            out.collect(value);
-                        }
-                        logger.info("received: '{}'", value);
+                @Override
+                public void close() throws Exception {
+                    if (shutdownState.value() != null && shutdownState.value()) {
+                        logger.info("Final shutdown check");
                     }
-
-                    private void submitBatch(Collector<String> out) {
-                        if (out != null) {
-                            for (String record : buffer) {
-                                out.collect(record);
-                            }
-                        } else {
-                            // Handle the case where out is null (e.g., when called from close())
-                            // Typically, you would forward the records to the sink directly
-                            for (String record : buffer) {
-                                // Implement the logic to send the record to the sink
-                                // For example, you might use an internal method to handle this:
-                                sendRecordToSink(record);
-                            }
-                        }
-                        buffer.clear();
-                    }
-
-                    private void sendRecordToSink(String record) {
-                        // Implement the logic to send the record to the sink
-                        // This could be done using a sink function or directly using a Redshift connection
-                        // For demonstration, just log the record
-                        logger.info("Sending record to sink: {}", record);
-                    }
-
-                    @Override
-                    public void close() throws Exception {
-                        if (shutdownState.value() != null && shutdownState.value()) {
-                            logger.info("Final shutdown check");
-                        }
-                        super.close();
-                    }
-                });
+                    super.close();
+                }
+            });
 
         // Sink the processed stream to a Redshift sink (replace with your actual sink)
         processedStream.addSink(new LoggingSink<>()).setParallelism(1);
