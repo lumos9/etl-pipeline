@@ -47,34 +47,74 @@ public class KafkaFlinkRedshift {
 
         // Process data and check for shutdown signal
         DataStream<String> processedStream = stream
-                .keyBy(value -> value.split(",")[0]) // Assuming id is the key // Assuming keyBy a field, modify as per your key
+                .keyBy(value -> {
+                   if(value.split(",").length >= 2) {
+                       return value.split(",")[1];
+                   }
+                   return value;
+                })
                 .process(new KeyedProcessFunction<>() {
 
                     private transient ValueState<Boolean> shutdownState;
+                    private transient ValueState<Long> messageCountState;
+                    private static final long CHECK_INTERVAL = 60000; // 60 seconds
 
                     @Override
                     public void open(Configuration parameters) throws Exception {
                         ValueStateDescriptor<Boolean> descriptor = new ValueStateDescriptor<>("shutdownState",
                                 Boolean.class);
                         shutdownState = getRuntimeContext().getState(descriptor);
+
+                        ValueStateDescriptor<Long> messageCountDescriptor = new ValueStateDescriptor<>("messageCountState", Long.class);
+                        messageCountState = getRuntimeContext().getState(messageCountDescriptor);
+
+                        // Set a timer to periodically check the shutdown state and log the message count
+                        //long currentTime = getRuntimeContext()..getCurrentProcessingTime();
+                        //getRuntimeContext().getProcessingTimeService().registerProcessingTimeTimer(currentTime + CHECK_INTERVAL);
                     }
 
                     @Override
                     public void processElement(String value, Context ctx, Collector<String> out) throws Exception {
+                        Long currentCount = messageCountState.value();
+                        if (currentCount == null) {
+                            currentCount = 0L;
+                        }
+                        messageCountState.update(currentCount + 1);
+
                         if ("SHUTDOWN".equals(value)) {
                             shutdownState.update(true);
                         } else {
-                            String[] fields = value.split(",");
-                            int id = Integer.parseInt(fields[0]);
-                            String name = fields[1].toUpperCase();
-                            String newValue = fields[2] + "_transformed";
-                            out.collect(id + "," + name + "," + newValue);
+                            if(value.split(",").length >= 4) {
+                                String[] fields = value.split(",");
+                                int index = Integer.parseInt(fields[0]);
+                                long id = Long.parseLong(fields[1]);
+                                String name = fields[2].toUpperCase();
+                                String newValue = fields[3] + "_transformed";
+                                out.collect(index + "," + id + "," + name + "," + newValue);
+                            } else {
+                                out.collect(value);
+                            }
                         }
                     }
 
                     @Override
                     public void onTimer(long timestamp, OnTimerContext ctx, Collector<String> out) throws Exception {
-                        // No timer required for this example
+                        // Log the message count periodically
+                        Long currentCount = messageCountState.value();
+                        if (currentCount != null) {
+                            logger.info("Current message count: {}", currentCount);
+                        }
+
+                        // Check the shutdown state
+                        if (shutdownState.value() != null && shutdownState.value()) {
+                            // Trigger job cancellation or other shutdown logic
+                            logger.info("Shutdown signal received. Shutting down...");
+                            // ctx.getExecutionEnvironment().cancel(); // Uncomment if you have a reference to the execution environment
+                        } else {
+                            // Register the next timer
+                            long currentTime = ctx.timerService().currentProcessingTime();
+                            ctx.timerService().registerProcessingTimeTimer(currentTime + CHECK_INTERVAL);
+                        }
                     }
 
                     @Override
@@ -82,7 +122,8 @@ public class KafkaFlinkRedshift {
                         if (shutdownState.value() != null && shutdownState.value()) {
                             // Trigger job cancellation or other shutdown logic
                             // For example, stopping the execution environment
-                            logger.info("Shutdown signal received. Shutting down...");
+                            logger.info("Final shutdown check. Total messages processed: {}",
+                                    messageCountState.value());
                             // ctx.getExecutionEnvironment().cancel(); // Uncomment if you have a reference to the execution environment
                         }
                         super.close();
@@ -92,8 +133,8 @@ public class KafkaFlinkRedshift {
         // Here, you can sink the transformed stream to Amazon Redshift
         // For simplicity, this example will just print the transformed records
         //transformedStream.print();
-        //transformedStream.addSink(new LoggingSink<>());
-        processedStream.addSink(new RedshiftSinkBatchAsync());
+        //processedStream.addSink(new LoggingSink<>()).setParallelism(1);
+        processedStream.addSink(new RedshiftSinkBatchAsync()).setParallelism(1);
         ///Add another sink
         //transformedStream.addSink(new RedshiftSink());
 

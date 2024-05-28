@@ -27,13 +27,13 @@ public class KafkaProducerExample {
         Producer<String, String> producer = new KafkaProducer<>(props);
 
         // Number of records to produce
-        int numRecords = 5001;
+        int numRecords = 5007;
         int print_limit = 1000;
         final int[] limit = {0};
 
         // Produce records
         for (int i = 1; i <= numRecords; i++) {
-            String record = i + ",name_" + i + ",value_" + i;
+            String record = i + "," + System.currentTimeMillis() + ",name_" + i + ",value_" + i;
 
             ProducerRecord<String, String> producerRecord = new ProducerRecord<>("sample-stream",
                     String.valueOf(i), record);
