@@ -46,7 +46,7 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
 
     @Override
     public void invoke(String value, SinkFunction.Context context) throws Exception {
-        synchronized (this) {
+        //synchronized (this) {
             if ("SHUTDOWN".equalsIgnoreCase(value)) {
                 logger.info("{} - Shutdown signal received. Flushing remaining records...", id);
                 flush();
@@ -57,14 +57,14 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
                     flush();
                 }
             }
-        }
+        //}
     }
 
     @Override
     public void close() throws Exception {
         logger.info("{} = Waiting for shutdown latch / signal...", id);
         shutdownLatch.await();
-        synchronized (this) {
+        //synchronized (this) {
             if (!buffer.isEmpty()) {
                 logger.info("{} = Loading last batch...", id);
                 flush();
@@ -72,7 +72,7 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
             if (dataSource != null) {
                 dataSource.close();
             }
-        }
+        //}
         super.close();
     }
 
@@ -88,7 +88,7 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
     }
 
     private void pretendLoad() throws Exception {
-        Thread.sleep(500);
+        //Thread.sleep(500);
     }
 
     private void loadToRedShift() throws SQLException {

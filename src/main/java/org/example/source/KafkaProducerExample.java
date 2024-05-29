@@ -1,5 +1,6 @@
 package org.example.source;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.logging.log4j.LogManager;
@@ -34,48 +35,57 @@ public class KafkaProducerExample {
         // Produce records
         for (int i = 1; i <= numRecords; i++) {
             String record = i + "," + System.currentTimeMillis() + ",name_" + i + ",value_" + i;
+            try {
+                ProducerRecord<String, String> producerRecord = new ProducerRecord<>("sample-stream",
+                        String.valueOf(i), record);
 
-            ProducerRecord<String, String> producerRecord = new ProducerRecord<>("sample-stream",
-                    String.valueOf(i), record);
-
-            // Send record asynchronously with a callback
-            producer.send(producerRecord, (metadata, exception) -> {
-                if (exception != null) {
-                    logger.error("Failed to deliver message: {}", exception.getMessage());
-                } else {
-                    limit[0]++;
-                    //logger.info("Message produced: {}", metadata.toString());
-                    if(limit[0] == print_limit) {
-                        logger.info("{} messages produced", limit[0]);
-                        limit[0] = 0;
+                // Send record asynchronously with a callback
+                producer.send(producerRecord, (metadata, exception) -> {
+                    if (exception != null) {
+                        logger.error("Failed to deliver message: {}", exception.getMessage());
+                    } else {
+                        limit[0]++;
+                        //logger.info("Message produced: {}", metadata.toString());
+                        if(limit[0] == print_limit) {
+                            logger.info("{} messages produced", limit[0]);
+                            limit[0] = 0;
+                        }
                     }
-                }
-            });
+                });
 
-            // Poll to serve delivery reports and free up space
-            producer.flush();
+                // Poll to serve delivery reports and free up space
+                producer.flush();
 
-            // Optional: Sleep to throttle message production
-            // Thread.sleep(1);
+                // Optional: Sleep to throttle message production
+                // Thread.sleep(1);
+            } catch (Exception exception) {
+                logger.error("Failed to send record for iteration {}. Details: {}",
+                        i, ExceptionUtils.getStackTrace(exception));
+            }
         }
 
         if(limit[0] > 0) {
             logger.info("last batch: {} messages produced", limit[0]);
         }
 
-        // Send the shutdown signal
-        ProducerRecord<String, String> shutdownRecord = new ProducerRecord<>("sample-stream",
-                "SHUTDOWN", "SHUTDOWN");
+        try {
+            // Send the shutdown signal
+            ProducerRecord<String, String> shutdownRecord = new ProducerRecord<>("sample-stream",
+                    "SHUTDOWN", "SHUTDOWN");
 
-        producer.send(shutdownRecord, (metadata, exception) -> {
-            if (exception != null) {
-                logger.error("Failed to deliver shutdown message: {}", exception.getMessage());
-            } else {
-                logger.info("Shutdown message produced: {}", metadata.toString());
-            }
-        });
-
-        // Ensure all messages are delivered before exiting
-        producer.close();
+            producer.send(shutdownRecord, (metadata, exception) -> {
+                if (exception != null) {
+                    logger.error("Failed to deliver shutdown message: {}", exception.getMessage());
+                } else {
+                    logger.info("Shutdown message produced: {}", metadata.toString());
+                }
+            });
+        } catch (Exception exception) {
+            logger.error("Failed to send SHUTDOWN record. Details: {}",
+                    ExceptionUtils.getStackTrace(exception));
+        } finally {
+            // Ensure all messages are delivered before exiting
+            producer.close();
+        }
     }
 }
