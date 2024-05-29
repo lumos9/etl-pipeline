@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
@@ -22,6 +23,8 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
     private static final int BATCH_SIZE = 1000;
 
     private transient CountDownLatch shutdownLatch;
+
+    private String id;
 
     @Override
     public void open(Configuration parameters) throws Exception {
@@ -38,13 +41,14 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
 
         buffer = new ArrayList<>();
         shutdownLatch = new CountDownLatch(1);
+        id = UUID.randomUUID().toString();
     }
 
     @Override
     public void invoke(String value, SinkFunction.Context context) throws Exception {
         synchronized (this) {
             if ("SHUTDOWN".equalsIgnoreCase(value)) {
-                logger.info("Shutdown signal received. Flushing remaining records...");
+                logger.info("{} - Shutdown signal received. Flushing remaining records...", id);
                 flush();
                 shutdownLatch.countDown();
             } else {
@@ -58,11 +62,11 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
 
     @Override
     public void close() throws Exception {
-        logger.info("Waiting for shutdown latch / signal...");
+        logger.info("{} = Waiting for shutdown latch / signal...", id);
         shutdownLatch.await();
         synchronized (this) {
             if (!buffer.isEmpty()) {
-                logger.info("Loading last batch...");
+                logger.info("{} = Loading last batch...", id);
                 flush();
             }
             if (dataSource != null) {
@@ -74,17 +78,17 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
 
     private void flush() throws Exception {
         if (!buffer.isEmpty()) {
-            logger.info("Attempting to load batch with size: {}", buffer.size());
+            logger.info("{} - Attempting to load batch with size: {}", id, buffer.size());
             pretendLoad();
             buffer.clear();
-            logger.info("Loaded");
+            logger.info("{} - Loaded", id);
         } else {
-            logger.info("Nothing to load. Batch is empty");
+            logger.info("{} - Nothing to load. Batch is empty", id);
         }
     }
 
     private void pretendLoad() throws Exception {
-        Thread.sleep(2000);
+        Thread.sleep(500);
     }
 
     private void loadToRedShift() throws SQLException {
