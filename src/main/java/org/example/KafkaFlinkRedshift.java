@@ -21,6 +21,9 @@ public class KafkaFlinkRedshift {
         // Set up the execution environment
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
+        int parallelism = env.getParallelism();
+        logger.info("Available parallelism: {}", parallelism);
+
         KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
                 .setBootstrapServers("localhost:9092")
                 .setTopics("sample-stream")
@@ -33,9 +36,9 @@ public class KafkaFlinkRedshift {
         DataStream<String> stream = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source");
 
         DataStream<String> transformedStream = stream.map(value -> {
-            if(value != null) {
+            if (value != null) {
                 String[] fields = value.split(",");
-                if(fields.length >= 4) {
+                if (fields.length >= 4) {
                     String index = fields[0];
                     String id = fields[1];
                     String name = fields[2];
@@ -48,13 +51,13 @@ public class KafkaFlinkRedshift {
                                     "transformed_value_" + value_1.split("_")[1]));
                 }
                 return value;
-
             }
 
-         return null;
-        });
+            return null;
+        }).setParallelism(parallelism); // Ensure transformation is also parallel
+
         // Sink the processed stream to a Redshift sink (replace with your actual sink)
-        transformedStream.addSink(new RedshiftSinkBatchAsync()).name("Amazon Redshift");
+        transformedStream.addSink(new RedshiftSinkBatchAsync()).name("Amazon Redshift").setParallelism(parallelism); // Ensure sink is parallel
 
         // Execute the Flink job
         env.execute("Kafka to Flink to Redshift");
