@@ -14,7 +14,6 @@ import java.util.List;
 
 public class KafkaFlinkRedshift {
     private static final Logger logger = LogManager.getLogger(KafkaFlinkRedshift.class);
-    private static final int BATCH_SIZE = 1000;
 
     public static void main(String[] args) throws Exception {
         logger.info("Starting Kafka Consumer...");

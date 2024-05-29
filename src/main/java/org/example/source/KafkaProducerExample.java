@@ -28,7 +28,7 @@ public class KafkaProducerExample {
         Producer<String, String> producer = new KafkaProducer<>(props);
 
         // Number of records to produce
-        int numRecords = 5007;
+        int numRecords = 100_000;
         int print_limit = 1000;
         final int[] limit = {0};
 

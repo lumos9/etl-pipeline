@@ -37,17 +37,16 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
         dataSource.setJdbcUrl("jdbc:redshift://your-redshift-cluster:5439/your-database");
         dataSource.setUser("your-username");
         dataSource.setPassword("your-password");
-        dataSource.setMaxPoolSize(10);
+        dataSource.setMaxPoolSize(20);
         dataSource.setMinPoolSize(1);
         dataSource.setAcquireIncrement(1);
         dataSource.setMaxStatements(100);
 
-        buffer = new LinkedBlockingQueue<>();
-        executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()); // Use a thread pool for parallel writes
+        buffer = new LinkedBlockingQueue<>(BATCH_SIZE * 10); // Adjust the buffer size as needed
+        executorService = Executors.newFixedThreadPool(Math.max(4, Runtime.getRuntime().availableProcessors()));
         shutdownLatch = new CountDownLatch(1);
         id = UUID.randomUUID().toString();
 
-        // Start a background task to flush the buffer
         executorService.submit(this::flushBuffer);
     }
 
@@ -64,10 +63,8 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
     @Override
     public void close() throws Exception {
         if (!buffer.isEmpty()) {
-            logger.info("{} = Loading last batch...", id);
             flush();
         }
-        logger.info("{} = Waiting for shutdown latch / signal...", id);
         shutdownLatch.await();
         executorService.shutdown();
         if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -82,9 +79,8 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
     private void flushBuffer() {
         try {
             while (!Thread.currentThread().isInterrupted() || !buffer.isEmpty()) {
-                //logger.info("{} - Current buffer size: {}", id, buffer.size());
                 flush();
-                Thread.sleep(1000);
+                Thread.sleep(500); // Reduce the sleep interval to 500ms or lower
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -113,7 +109,7 @@ public class RedshiftSinkBatchAsync extends RichSinkFunction<String> {
     }
 
     private void pretendLoad(List<String> batch) throws Exception {
-        //Thread.sleep(500);
+        Thread.sleep(1500);
         logger.info("{} - {} Loaded", id, batch.size());
     }
 
