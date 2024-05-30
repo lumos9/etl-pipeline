@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class KafkaProducerExample {
     private static final Logger logger = LogManager.getLogger(KafkaProducerExample.class);
@@ -27,10 +28,28 @@ public class KafkaProducerExample {
         // Create Kafka producer
         Producer<String, String> producer = new KafkaProducer<>(props);
 
+        try {
+            // Send the shutdown signal
+            ProducerRecord<String, String> shutdownRecord = new ProducerRecord<>("sample-stream",
+                    "INIT", "INIT");
+
+            producer.send(shutdownRecord, (metadata, exception) -> {
+                if (exception != null) {
+                    logger.error("Failed to deliver init message: {}", exception.getMessage());
+                } else {
+                    logger.info("init message produced: {}", metadata.toString());
+                }
+            });
+        } catch (Exception exception) {
+            logger.error("Failed to send init record. Details: {}",
+                    ExceptionUtils.getStackTrace(exception));
+        }
+
         // Number of records to produce
         int numRecords = 100_000;
         int print_limit = 1000;
         final int[] limit = {0};
+        AtomicInteger total = new AtomicInteger();
 
         // Produce records
         for (int i = 1; i <= numRecords; i++) {
@@ -47,7 +66,8 @@ public class KafkaProducerExample {
                         limit[0]++;
                         //logger.info("Message produced: {}", metadata.toString());
                         if(limit[0] == print_limit) {
-                            logger.info("{} messages produced", limit[0]);
+                            int currentCount = total.addAndGet(limit[0]);
+                            logger.info("{} messages produced. Total: {}", limit[0], currentCount);
                             limit[0] = 0;
                         }
                     }
@@ -65,7 +85,8 @@ public class KafkaProducerExample {
         }
 
         if(limit[0] > 0) {
-            logger.info("last batch: {} messages produced", limit[0]);
+            int currentCount = total.addAndGet(limit[0]);
+            logger.info("last batch: {} messages produced. Total: {}", limit[0], currentCount);
         }
 
         try {

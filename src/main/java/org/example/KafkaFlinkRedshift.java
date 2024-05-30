@@ -2,12 +2,16 @@ package org.example;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
+import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
+import org.apache.flink.connector.jdbc.JdbcSink;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.example.sink.JDBCSink;
 import org.example.sink.RedshiftSinkBatchAsync;
 
 import java.util.List;
@@ -38,14 +42,14 @@ public class KafkaFlinkRedshift {
             if (value != null) {
                 String[] fields = value.split(",");
                 if (fields.length >= 4) {
-                    String index = fields[0];
-                    String id = fields[1];
+                    String id = fields[0];
+                    String timestamp = fields[1];
                     String name = fields[2];
                     String value_1 = fields[3];
 
                     return String.join(",",
-                            List.of(index,
-                                    id,
+                            List.of(id,
+                                    timestamp,
                                     "transformed_name_" + name.split("_")[1],
                                     "transformed_value_" + value_1.split("_")[1]));
                 }
@@ -56,7 +60,15 @@ public class KafkaFlinkRedshift {
         }).setParallelism(parallelism); // Ensure transformation is also parallel
 
         // Sink the processed stream to a Redshift sink (replace with your actual sink)
-        transformedStream.addSink(new RedshiftSinkBatchAsync()).name("Amazon Redshift").setParallelism(parallelism); // Ensure sink is parallel
+        //transformedStream
+        // .addSink(new RedshiftSinkBatchAsync())
+        // .name("Amazon Redshift")
+        // .setParallelism(parallelism); // Ensure sink is parallel
+
+        transformedStream
+                .addSink(new JDBCSink())
+                .name("JDBCSink - Amazon Redshift")
+                .setParallelism(parallelism);
 
         // Execute the Flink job
         env.execute("Kafka to Flink to Redshift");
