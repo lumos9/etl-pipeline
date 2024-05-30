@@ -5,6 +5,7 @@ import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.example.sink.JDBCSink;
 
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,6 +52,7 @@ public class KafkaProducerExample {
         final int[] limit = {0};
         AtomicInteger total = new AtomicInteger();
 
+        long start = System.nanoTime();
         // Produce records
         for (int i = 1; i <= numRecords; i++) {
             String record = i + "," + System.currentTimeMillis() + ",name_" + i + ",value_" + i;
@@ -83,6 +85,8 @@ public class KafkaProducerExample {
                         i, ExceptionUtils.getStackTrace(exception));
             }
         }
+
+        logger.info("data sent in {}", JDBCSink.getHumanReadableTimeDifference(start, System.nanoTime()));
 
         if(limit[0] > 0) {
             int currentCount = total.addAndGet(limit[0]);

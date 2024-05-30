@@ -5,13 +5,11 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.checkerframework.checker.units.qual.A;
 
 import java.io.Serial;
 import java.nio.ByteBuffer;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -19,20 +17,18 @@ import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class JDBCSink extends RichSinkFunction<String> {
-    private static final Logger logger = LogManager.getLogger(JDBCSink.class);
+public class JDBCASyncSink extends RichSinkFunction<String> {
+    private static final Logger logger = LogManager.getLogger(JDBCASyncSink.class);
 
     @Serial
     private static final long serialVersionUID = 1L;
     private transient ComboPooledDataSource dataSource;
-    private List<String> buffer;
-    private final int batchSize;
+    private LinkedBlockingQueue<String> buffer;
+    private static final int BATCH_SIZE = 50_000;
     private String loadid;
     private transient ExecutorService executorService;
     private transient CountDownLatch shutdownLatch;
     private long start;
-    private Connection connection;
-    private PreparedStatement statement;
     private AtomicLong total;
 
     public static String toShortString(UUID uuid) {
@@ -98,17 +94,12 @@ public class JDBCSink extends RichSinkFunction<String> {
         return result.toString().trim();
     }
 
-    public JDBCSink(int batchSize) {
-        this.batchSize = batchSize;
-        this.buffer = new ArrayList<>();
-    }
-
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
     }
 
-    void init() throws Exception {
+    private void init() throws Exception {
         dataSource = new ComboPooledDataSource();
         //dataSource.setDriverClass("com.amazon.redshift.jdbc42.Driver");
         //dataSource.setJdbcUrl("jdbc:redshift://your-redshift-cluster:5439/your-database");
@@ -121,67 +112,119 @@ public class JDBCSink extends RichSinkFunction<String> {
         dataSource.setAcquireIncrement(1);
         dataSource.setMaxStatements(100);
 
-        buffer = new ArrayList<>(); // Adjust the buffer size as needed
+        buffer = new LinkedBlockingQueue<>(BATCH_SIZE * 10); // Adjust the buffer size as needed
+        executorService = Executors.newFixedThreadPool(Math.max(4, Runtime.getRuntime().availableProcessors()));
+        shutdownLatch = new CountDownLatch(1);
         loadid = toShortString(UUID.randomUUID());
         logger.info("{} - Initialized", loadid);
-        total = new AtomicLong(0);
 
+        executorService.submit(this::flushBuffer);
         start = System.nanoTime();
+        total = new AtomicLong(0);
     }
-
 
     @Override
     public void invoke(String value, Context context) throws Exception {
         if(value.equalsIgnoreCase("INIT")) {
             init();
         } else if(value.equalsIgnoreCase("SHUTDOWN")) {
-            handleEndOfStream();
-        } else if(value.split(",").length >= 4) {
-            buffer.add(value);
-            if (buffer.size() >= batchSize) {
-                flush();
-            }
+            cleanup();
+            shutdownLatch.countDown();
+        } else {
+            buffer.put(value);
         }
     }
 
-    private void flush() throws SQLException {
-        if(!buffer.isEmpty()) {
-            long start = System.nanoTime();
-            connection = dataSource.getConnection();
-            statement = connection.prepareStatement("INSERT INTO test (id, timestamp, name, value) VALUES (?, ?, ?, ?)" +
-                    "ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value");
-            connection.setAutoCommit(false);
-            for (String record : buffer) {
-                String[] fields = record.split(",");
-                int id = Integer.parseInt(fields[0]);
-                long timestamp = Long.parseLong(fields[1]);
-                String name = fields[2];
-                String value = fields[3];
-                statement.setInt(1, id);
-                statement.setTimestamp(2, new Timestamp(timestamp));
-                statement.setString(3, name);
-                statement.setString(4, value);
-                statement.addBatch();
+    private void flushBuffer() {
+        try {
+            while (!Thread.currentThread().isInterrupted() || !buffer.isEmpty()) {
+                flush();
+                Thread.sleep(500); // Reduce the sleep interval to 500ms or lower
             }
-            statement.executeBatch();
-            connection.commit();
-            logger.info("{} - Loaded {} records in {}",
-                    loadid, buffer.size(),  getHumanReadableTimeDifference(start, System.nanoTime()));
-            total.addAndGet(buffer.size());
-            buffer.clear();
-            if (connection != null) {
-                connection.close();
+            logger.info("Buffer empty. Exiting background flushBuffer...");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            logger.error("Error in flushing buffer: ", e);
+        }
+    }
+
+    private void flush() throws Exception {
+        if (!buffer.isEmpty()) {
+            List<String> batch = new ArrayList<>();
+            buffer.drainTo(batch, BATCH_SIZE);
+            submitBatch(batch);
+        }
+    }
+
+    private  void submitBatch(List<String> batch) throws Exception {
+        if (!batch.isEmpty()) {
+            executorService.submit(() -> {
+                try {
+                    loadToDB(batch);
+                } catch (Exception e) {
+                    logger.error("{} - Error in loading to Redshift: ", loadid, e);
+                }
+            });
+            logger.info("{} - submitted batch with size: {}", loadid, batch.size());
+        } else {
+            logger.info("{} - Nothing to load. batch is empty", loadid);
+        }
+    }
+
+    private void loadToDB(List<String> batch) throws SQLException {
+        if(!batch.isEmpty()) {
+            long start = System.nanoTime();
+            logger.debug("{} - Attempting to load batch with size: {}", loadid, batch.size());
+            try (Connection connection = dataSource.getConnection()) {
+                connection.setAutoCommit(false);
+                String sql = "INSERT INTO test (id, timestamp, name, value) VALUES (?, ?, ?, ?)";
+                try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                    for (String record : batch) {
+                        String[] fields = record.split(",");
+                        int id = Integer.parseInt(fields[0]);
+                        long timestamp = Long.parseLong(fields[1]);
+                        String name = fields[2];
+                        String value = fields[3];
+                        statement.setInt(1, id);
+                        statement.setTimestamp(2, new Timestamp(timestamp));
+                        statement.setString(3, name);
+                        statement.setString(4, value);
+                        statement.addBatch();
+                    }
+                    statement.executeBatch();
+                    connection.commit();
+                    logger.info("{} - Loaded in {}: {}",
+                            loadid, getHumanReadableTimeDifference(start, System.nanoTime()), batch.size());
+                    total.addAndGet(batch.size());
+                } catch (SQLException e) {
+                    connection.rollback();
+                    throw e;
+                } finally {
+                    connection.close();
+                }
             }
         } else {
-            logger.info("{} - Buffer is empty. Nothing to load.", loadid);
+            logger.info("{} - Nothing to load. Batch is empty", loadid);
         }
     }
 
-    void handleEndOfStream() throws Exception {
-        logger.info("{} - End of Stream signal received. Flushing last batch...", loadid);
-        flush(); // Flush any remaining records
-        if (statement != null) {
-            statement.close();
+    private void cleanup() throws Exception {
+        if (!buffer.isEmpty()) {
+            submitBatch(buffer.stream().toList());
+        }
+        executorService.shutdown();
+        // Wait with a timeout and log the progress
+        if (!executorService.awaitTermination(2, TimeUnit.SECONDS)) {
+            logger.warn("Tasks are taking too long to complete. Forcing shutdown...");
+            // Force shutdown if tasks are not completed within the timeout
+            executorService.shutdownNow();
+            // Await termination again to make sure all threads are terminated
+            if (!executorService.awaitTermination(1, TimeUnit.MINUTES)) {
+                logger.error("Executor service did not terminate.");
+            }
+        } else {
+            logger.info("All tasks completed within the timeout.");
         }
         if (dataSource != null) {
             dataSource.close();
@@ -192,7 +235,8 @@ public class JDBCSink extends RichSinkFunction<String> {
 
     @Override
     public void close() throws Exception {
+        cleanup();
+        shutdownLatch.await();
         super.close();
-        handleEndOfStream();
     }
 }

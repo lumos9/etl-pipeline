@@ -9,11 +9,14 @@ import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.example.sink.JDBCASyncSink;
 import org.example.sink.JDBCSink;
 import org.example.sink.RedshiftSinkBatchAsync;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 public class KafkaFlinkRedshift {
@@ -36,7 +39,9 @@ public class KafkaFlinkRedshift {
                 .build();
 
         // Add the consumer to the environment
-        DataStream<String> stream = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source");
+        DataStream<String> stream = env.fromSource(kafkaSource,
+                WatermarkStrategy.noWatermarks(),
+                "Kafka Source");
 
         DataStream<String> transformedStream = stream.map(value -> {
             if (value != null) {
@@ -66,8 +71,8 @@ public class KafkaFlinkRedshift {
         // .setParallelism(parallelism); // Ensure sink is parallel
 
         transformedStream
-                .addSink(new JDBCSink())
-                .name("JDBCSink - Amazon Redshift")
+                .addSink(new JDBCSink(1000))
+                .name("JDBCSink - Custom")
                 .setParallelism(parallelism);
 
         // Execute the Flink job
