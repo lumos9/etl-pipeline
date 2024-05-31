@@ -1,4 +1,5 @@
-# ETL Pipeline: Kafka Source - Flink Transformations - Postgres Sink
+# ETL Pipeline
+## Kafka Source - Flink Transformations - Postgres Sink
 
 ## Overview
 
