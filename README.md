@@ -142,12 +142,15 @@ If you encounter any issues, please create a new issue in this repository. Make 
 
 For any inquiries or questions, please contact me at [contact information].
 
----
+[//]: # (---)
 
-Thank you for checking out **ETL Pipeline**! We hope you find it useful and engaging. Happy coding!
+[//]: # ()
+[//]: # (Thank you for checking out **ETL Pipeline**! We hope you find it useful and engaging. Happy coding!)
 
+[//]: # ()
 [//]: # ([Optional: Include any acknowledgments or credits here])
 
----
+[//]: # ()
+[//]: # (---)
 
 [//]: # (*Note: Replace placeholders with actual information relevant to your project.*)
