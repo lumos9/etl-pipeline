@@ -47,7 +47,8 @@ Welcome to the **ETL Pipeline** repository. This experimental project is designe
 7. **Dynamic Resource Allocation** - Develop a dynamic resource allocation system that scales processing resources up or down based on the workload to ensure efficient resource use and cost management.
 8. **Real-Time Anomaly Detection** - Incorporate machine learning models for real-time anomaly detection to identify and respond to unusual patterns and behaviors instantly.
 9. **Comprehensive Monitoring and Alerting** - Implement a comprehensive monitoring and alerting system to track the health and performance of the entire data pipeline, ensuring quick detection and resolution of issues.
-10. **Enhanced Fault Tolerance and Recovery** -Improve fault tolerance mechanisms and develop automated recovery procedures to ensure the robustness and reliability of the system under various failure scenarios.
+10. **Enhanced Fault Tolerance and Recovery** - Improve fault tolerance mechanisms and develop automated recovery procedures to ensure the robustness and reliability of the system under various failure scenarios.
+11. **Database Agnostic** - Support for variety of databases (not just SQL based) with connection pooling to maximize concurrency
 
 ## Installation
 
