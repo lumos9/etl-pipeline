@@ -1,29 +1,29 @@
 #!/bin/bash
 
-#!/bin/bash
+source setup/logger.sh
 
 # Function to print error message and exit
 function error_exit {
-    echo "$1" 1>&2
+    error "$1" 1>&2
     exit 1
 }
 
 # Function to run a command and check its exit code
-run_command() {
-    "$@"
-    EXIT_CODE=$?
-    if [ $EXIT_CODE -ne 0 ]; then
-        # shellcheck disable=SC2145
-        echo "Error: Command '$@' failed with exit code '$EXIT_CODE'"
-        exit $EXIT_CODE
-    fi
-}
+#run_command() {
+#    "$@"
+#    EXIT_CODE=$?
+#    if [ $EXIT_CODE -ne 0 ]; then
+#        # shellcheck disable=SC2145
+#        error "Command '$@' failed with exit code '$EXIT_CODE'"
+#        exit $EXIT_CODE
+#    fi
+#}
 
 # Check if Docker is installed and print version
 if command -v docker &> /dev/null
 then
     docker_version=$(docker --version)
-    echo "Docker is installed: $docker_version"
+    info "Docker is installed: $docker_version"
 else
     error_exit "Docker is not installed. Please install Docker and try again."
 fi
@@ -37,7 +37,7 @@ then
     then
         error_exit "Java version is $java_version. Please install Java 17 or above."
     else
-        echo "Java is installed: version $java_version"
+        info "Java is installed: version $java_version"
     fi
 else
     error_exit "Java is not installed. Please install Java 17 or above and try again."
@@ -52,7 +52,7 @@ then
     then
         error_exit "Python version is $python_version. Please install Python 3 or above."
     else
-        echo "Python is installed: version $python_version"
+        info "Python is installed: version $python_version"
     fi
 else
     error_exit "Python is not installed. Please install Python 3 or above and try again."
@@ -80,57 +80,13 @@ check_services() {
     #echo "$status" | grep -q "Exit"
     # shellcheck disable=SC2181
     if [ $? -eq 0 ]; then
-        echo "All services are successfully initiated."
+        info "All services are successfully initiated."
     else
-        echo "services failed to start."
+        error "services failed to start."
         #echo "$status"
         exit 1
     fi
 }
-
-# Check if Kafka broker is up and running on localhost port 9092
-docker_ps_output=$(docker ps --filter "publish=9092" --format "{{.Names}}")
-
-if [ -z "$docker_ps_output" ]
-then
-    echo "Kafka broker is not running on localhost:9092 in any Docker container. Starting..."
-    COMPOSE_FILE="setup/kafka-docker-compose.yml"
-    # Start the services
-    run_command docker-compose -f $COMPOSE_FILE up -d --remove-orphans
-    # Check the status of the services
-    status=$(docker-compose -f $COMPOSE_FILE ps)
-    echo "Waiting for 5 secs to initiate Kafka services..."
-    countdown 5
-    # shellcheck disable=SC2181
-    if [ $? -eq 0 ]; then
-        echo "All services are successfully initiated."
-    else
-        echo "services failed to start."
-        echo "$status"
-        exit 1
-    fi
-    echo "Waiting for 1 minute to load Kafka services..."
-    countdown 60
-fi
-
-kafka_container=$(docker exec -it "$docker_ps_output" sh -c 'nc -zv localhost 9092 2>&1')
-if [[ "$kafka_container" == *"succeeded"* || "$kafka_container" == *"Connected to"* ]]
-then
-    echo "Kafka broker is up and running on localhost:9092 in container: $docker_ps_output"
-else
-    echo "Kafka broker is not accessible on localhost:9092 in the Docker container.."
-    echo "Waiting for another minute to load Kafka services..."
-    countdown 60
-    kafka_container=$(docker exec -it "$docker_ps_output" sh -c 'nc -zv localhost 9092 2>&1')
-    if [[ "$kafka_container" == *"succeeded"* || "$kafka_container" == *"Connected to"* ]]
-    then
-        echo "Kafka broker is up and running on localhost:9092 in container: $docker_ps_output"
-    else
-        echo "Something went wrong launching Confluence kafka via docker container"
-        exit 1
-    fi
-fi
-
 
 # Variables
 KAFKA_CONTAINER_NAME="broker"
@@ -140,23 +96,98 @@ BROKER_PORT="9092"
 NUM_PARTITIONS=1
 REPLICATION_FACTOR=1
 
-echo "Setting up new kafka topic '$TOPIC_NAME'.."
+# Check if Kafka broker is up and running on localhost port 9092
+docker_ps_output=$(docker ps --filter "publish=9092" --format "{{.Names}}")
+
+if [ -z "$docker_ps_output" ]
+then
+    info "Kafka broker is not running on localhost:9092 in any Docker container. Starting..."
+    COMPOSE_FILE="setup/kafka-docker-compose.yml"
+    # Start the services
+    run_command docker-compose -f $COMPOSE_FILE up -d --remove-orphans
+    # Check the status of the services
+    status=$(docker-compose -f $COMPOSE_FILE ps)
+    info "Waiting for 5 secs to initiate Kafka services..."
+    countdown 5
+    # shellcheck disable=SC2181
+    if [ $? -eq 0 ]; then
+        info "All services are successfully initiated."
+    else
+        error "services failed to start."
+        error "$status"
+        exit 1
+    fi
+    info "Waiting for 1 minute to load Kafka services..."
+    countdown 60
+fi
+
+# Function to check if a Kafka topic exists
+topic_exists() {
+    TOPIC_NAME=$1
+    docker exec $KAFKA_CONTAINER_NAME kafka-topics --list --bootstrap-server $BROKER_HOST:$BROKER_PORT | grep -w "$TOPIC_NAME" > /dev/null 2>&1
+    return $?
+}
+
+# Function to delete a Kafka topic if it exists
+delete_topic_if_exists() {
+    TOPIC_NAME=$1
+    info "Checking if Kafka Topic '$TOPIC_NAME' already exists..."
+    if topic_exists "$TOPIC_NAME"; then
+        info "Kafka Topic '$TOPIC_NAME' already exists. Deleting it..."
+        docker exec $KAFKA_CONTAINER_NAME kafka-topics --delete --topic "$TOPIC_NAME" --bootstrap-server $BROKER_HOST:$BROKER_PORT
+        if [ $? -eq 0 ]; then
+            info "Kafka Topic '$TOPIC_NAME' deleted successfully."
+        else
+            error_exit "Failed to delete topic '$TOPIC_NAME'."
+        fi
+    else
+        info "Kafka Topic '$TOPIC_NAME' does not exist. No action taken."
+    fi
+}
+
+kafka_container=$(docker exec -it "$docker_ps_output" sh -c 'nc -zv localhost 9092 2>&1')
+if [[ "$kafka_container" == *"succeeded"* || "$kafka_container" == *"Connected to"* ]]
+then
+    info "Kafka broker is up and running on localhost:9092 in container: $docker_ps_output"
+    delete_topic_if_exists $TOPIC_NAME
+else
+    warn "Kafka broker is not accessible on localhost:9092 in the Docker container.."
+    info "Waiting for another minute to load Kafka services..."
+    countdown 60
+    kafka_container=$(docker exec -it "$docker_ps_output" sh -c 'nc -zv localhost 9092 2>&1')
+    if [[ "$kafka_container" == *"succeeded"* || "$kafka_container" == *"Connected to"* ]]
+    then
+        info "Kafka broker is up and running on localhost:9092 in container: $docker_ps_output"
+        delete_topic_if_exists $TOPIC_NAME
+    else
+        error "Something went wrong launching Confluence kafka via docker container"
+        exit 1
+    fi
+fi
+
+info "Setting up new kafka topic '$TOPIC_NAME'.."
 
 # Create the Kafka topic
 run_command docker exec -it \
   $KAFKA_CONTAINER_NAME \
   kafka-topics \
   --create \
-  --topic $TOPIC_NAME \
+  --topic "$TOPIC_NAME" \
   --bootstrap-server $BROKER_HOST:$BROKER_PORT \
   --partitions $NUM_PARTITIONS \
   --replication-factor $REPLICATION_FACTOR
 
-echo "Kafka topic '$TOPIC_NAME' created successfully"
+info "Kafka topic '$TOPIC_NAME' created successfully"
 
-echo "Setting up local postgres db.."
+info "Setting up local postgres db.."
 
 mkdir -p local_db
+
+info "Stopping existing postgres container 'local_postgres'.."
+run_command docker stop local_postgres
+
+info "Deleting existing postgres container 'local_postgres'.."
+run_command docker rm local_postgres
 
 COMPOSE_FILE="setup/postgres/postgres-docker-compose.yml"
 run_command docker-compose -f $COMPOSE_FILE up -d
@@ -174,10 +205,10 @@ docker_ps_output=$(docker ps --filter "publish=5432" --format "{{.Names}}")
 postgres_db_status=$(nc -zv localhost 5432 2>&1)
 if [[ "$postgres_db_status" == *"succeeded"* || "$postgres_db_status" == *"Connected to"* ]]
 then
-    echo "Postgres DB is already up and running on localhost:5432 in container: $docker_ps_output"
+    info "Postgres DB is already up and running on localhost:5432 in container: $docker_ps_output"
     run_command docker exec -i local_postgres psql -U postgres -d postgres -f /create_table.sql
 else
     error_exit "Unable to connect postgres db via container"
 fi
 
-echo "setup complete!"
+info "setup complete!"

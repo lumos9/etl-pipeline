@@ -1,8 +1,10 @@
 #!/bin/bash
 
+source setup/logger.sh
+
 # Function to print error message and exit
 function error_exit {
-    echo "$1" 1>&2
+    error "$1" 1>&2
     exit 1
 }
 
@@ -10,7 +12,7 @@ function error_exit {
 if command -v docker &> /dev/null
 then
     docker_version=$(docker --version)
-    echo "Docker is installed: $docker_version"
+    info "Docker is installed: $docker_version"
 else
     error_exit "Docker is not installed. Please install Docker and try again."
 fi
@@ -24,7 +26,7 @@ then
     then
         error_exit "Java version is $java_version. Please install Java 17 or above."
     else
-        echo "Java is installed: version $java_version"
+        info "Java is installed: version $java_version"
     fi
 else
     error_exit "Java is not installed. Please install Java 17 or above and try again."
@@ -39,7 +41,7 @@ then
     then
         error_exit "Python version is $python_version. Please install Python 3 or above."
     else
-        echo "Python is installed: version $python_version"
+        info "Python is installed: version $python_version"
     fi
 else
     error_exit "Python is not installed. Please install Python 3 or above and try again."
@@ -55,10 +57,10 @@ else
     kafka_container=$(docker exec -it "$docker_ps_output" sh -c 'nc -zv localhost 9092 2>&1')
     if [[ "$kafka_container" == *"succeeded"* || "$kafka_container" == *"Connected to"* ]]
     then
-        echo "Kafka broker is up and running on localhost:9092 in container: $docker_ps_output"
+        info "Kafka broker is up and running on localhost:9092 in container: $docker_ps_output"
     else
         error_exit "Kafka broker is not accessible on localhost:9092 in the Docker container."
     fi
 fi
 
-echo "All checks passed successfully."
+info "All checks passed successfully."
