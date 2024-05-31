@@ -3,12 +3,14 @@
 ## Overview
 Kafka Source - Flink Transformations - Postgres Sink
 
-Welcome to the **ETL Pipeline** repository. This experimental project is designed to load a Apache Kafka stream of large dataset csv records to a JDBC sink (Postgres) via Apache Flink while applying minor transformations. It is built with Java 17, Gradle and Docker, aiming to provide a template code-base for ETL pipelines with large datasets via low latency streaming. This takes full advantage of local machine's resources and convenient for Proof-Of-Concept demos, learning, experimentation etc.
+Welcome to the **ETL Pipeline** repository. This experimental project is designed to load a real-time Apache Kafka stream of large dataset csv records (Test data of 100K records for demo) to a JDBC sink (Postgres) via Apache Flink while applying minor transformations. It is built with Java 17, Gradle and Docker, aiming to provide a template code-base for ETL pipelines with large datasets via low latency streaming (some Use Cases listed below). This takes full advantage of local machine's resources and convenient for Proof-Of-Concept demos, learning, experimentation etc.
 
 [//]: # ([Optional: Include a screenshot or a gif of the project])
 
 ## Table of Contents
 
+- [Real-World Use Cases](#real-world-use-cases)
+- [Future Work](#future-work)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Contributing](#contributing)
@@ -22,6 +24,30 @@ Welcome to the **ETL Pipeline** repository. This experimental project is designe
 [//]: # (- **Feature 2:** Detailed explanation of feature 2.)
 
 [//]: # (- **Feature 3:** Detailed explanation of feature 3.)
+
+## Real-World Use Cases
+
+1. **Real-Time Analytics Dashboard** - Powers a live dashboard for monitoring website traffic and user behavior.
+2. **Fraud Detection System** - Detects and flags fraudulent activities in real-time financial transactions.
+3. **IoT Data Processing** - Processes and analyzes real-time data from IoT devices for smart city applications.
+4. **Log Aggregation and Monitoring** - Aggregates and monitors logs from multiple services to identify critical issues.
+5. **Real-Time Inventory Management** - Manages inventory levels in real-time across multiple locations or warehouses.
+6. **User Personalization and Recommendations** - Delivers personalized content and recommendations based on user interactions.
+7. **Real-Time Financial Market Data Processing** - Analyzes financial market data streams to inform trading strategies in real-time.
+
+
+## Future Work
+
+1. **Pulling DB Credentials from Secrets Manager** - Implement secure management of database credentials using a Secrets Manager to enhance security and simplify credential rotation.
+2. **End-to-End Encrypted Streams** - Develop end-to-end encryption for data streams to ensure the security and privacy of sensitive datasets throughout the entire pipeline.
+3. **Enhanced Parser Support** - Extend support to various data formats such as CSV, TSV, Delimited, JSON, and XML, including efficient handling of large datasets during parsing.
+4. **On-the-Fly Lookup Support** - Implement on-the-fly lookups to fetch required identifiers and metadata from the database dynamically during stream processing.
+5. **Advanced Caching Mechanisms** - Introduce multiple layers of caching to optimize the performance of data transformations and mappings, reducing latency and improving throughput.
+6. **Multi-Stream and Multi-Topic Support** - Enable the application to handle multiple Kafka topics and streams concurrently, maximizing resource utilization and scaling to accommodate billions of records per second.
+7. **Dynamic Resource Allocation** - Develop a dynamic resource allocation system that scales processing resources up or down based on the workload to ensure efficient resource use and cost management.
+8. **Real-Time Anomaly Detection** - Incorporate machine learning models for real-time anomaly detection to identify and respond to unusual patterns and behaviors instantly.
+9. **Comprehensive Monitoring and Alerting** - Implement a comprehensive monitoring and alerting system to track the health and performance of the entire data pipeline, ensuring quick detection and resolution of issues.
+10. **Enhanced Fault Tolerance and Recovery** -Improve fault tolerance mechanisms and develop automated recovery procedures to ensure the robustness and reliability of the system under various failure scenarios.
 
 ## Installation
 
