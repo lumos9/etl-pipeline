@@ -1,4 +1,4 @@
-# ETL Pipeline: A Billion Records to Postgres
+# ETL Pipeline: Kafka Source - Flink Transformations - Postgres Sink
 
 ## Overview
 
