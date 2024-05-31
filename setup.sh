@@ -156,15 +156,17 @@ echo "Kafka topic '$TOPIC_NAME' created successfully"
 
 echo "Setting up local postgres db.."
 
-COMPOSE_FILE="setup/postgres-docker-compose.yml"
+mkdir -p local_db
+
+COMPOSE_FILE="setup/postgres/postgres-docker-compose.yml"
 run_command docker-compose -f $COMPOSE_FILE up -d
 
-run_command docker cp setup/wait-for-postgres-startup.sh local_postgres:/wait-for-postgres-startup.sh
+run_command docker cp setup/postgres/wait-for-postgres-startup.sh local_postgres:/wait-for-postgres-startup.sh
 
 # Execute the readiness check from the host machine
 run_command docker exec -it local_postgres /wait-for-postgres-startup.sh
 
-run_command docker cp setup/create_table.sql local_postgres:/create_table.sql
+run_command docker cp setup/postgres/create_table.sql local_postgres:/create_table.sql
 
 # Check if postgres container is up and running on localhost port 5432
 docker_ps_output=$(docker ps --filter "publish=5432" --format "{{.Names}}")

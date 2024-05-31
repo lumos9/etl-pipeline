@@ -12,7 +12,7 @@ java {
 }
 
 application {
-    mainClassName = 'org.example.KafkaFlinkRedshift'
+    mainClassName = 'org.example.KafkaSourceFlinkDBSink'
     applicationDefaultJvmArgs = [
             '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
             '--add-opens', 'java.base/java.io=ALL-UNNAMED',
@@ -24,7 +24,7 @@ application {
 jar {
     manifest {
         attributes(
-                'Main-Class': 'org.example.KafkaFlinkRedshift'
+                'Main-Class': 'org.example.KafkaSourceFlinkDBSink'
         )
     }
 }

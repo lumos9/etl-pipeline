@@ -58,7 +58,7 @@ To use this project, follow these steps:
 
 1. Start the Kafka Consumer one shell:
     ```bash
-    ./start-kafka-consumer-flink-redshift.sh
+    ./start-kafka-consumer-flink-db-sink.sh
     ```
 2. Start the Kafka Producer in another shell:
     ```bash

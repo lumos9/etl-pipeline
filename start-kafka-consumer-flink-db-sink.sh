@@ -6,4 +6,4 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-java -cp build/libs/app-1.0.jar org.example.KafkaFlinkRedshift
+java -cp build/libs/app-1.0.jar org.example.KafkaSourceFlinkDBSink

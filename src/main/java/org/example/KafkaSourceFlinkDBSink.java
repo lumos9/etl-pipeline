@@ -2,25 +2,18 @@ package org.example;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
-import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
-import org.apache.flink.connector.jdbc.JdbcSink;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.example.sink.JDBCASyncSink;
 import org.example.sink.JDBCSink;
-import org.example.sink.RedshiftSinkBatchAsync;
 
-import java.sql.Timestamp;
 import java.util.List;
 
-public class KafkaFlinkRedshift {
-    private static final Logger logger = LogManager.getLogger(KafkaFlinkRedshift.class);
+public class KafkaSourceFlinkDBSink {
+    private static final Logger logger = LogManager.getLogger(KafkaSourceFlinkDBSink.class);
 
     public static void main(String[] args) throws Exception {
         logger.info("Starting Kafka Consumer...");
@@ -76,6 +69,6 @@ public class KafkaFlinkRedshift {
                 .setParallelism(parallelism);
 
         // Execute the Flink job
-        env.execute("Kafka to Flink to Redshift");
+        env.execute("Kafka Source to Flink to DB Sink");
     }
 }
