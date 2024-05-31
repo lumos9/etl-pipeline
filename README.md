@@ -2,46 +2,47 @@
 
 ## Overview
 
-Welcome to the **Project Name** repository. This project is designed to [provide a brief description of what the project does]. It is built with Docker, Netcat, Git, and Java 17 or higher, aiming to [mention the main goals or purposes of the project].
+Welcome to the **ETL Pipeline** repository. This experimental project is designed to load a Apache Kafka stream of large dataset csv records to a JDBC sink (Postgres) via Apache Flink while applying minor transformations. It is built with Java 17, Gradle and Docker, aiming to provide a template code-base for ETL pipelines with large datasets via low latency streaming. This takes full advantage of local machine's resources and convenient for Proof-Of-Concept demos, learning, experimentation etc.
 
-[Optional: Include a screenshot or a gif of the project]
+[//]: # ([Optional: Include a screenshot or a gif of the project])
 
 ## Table of Contents
 
-- [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Configuration](#configuration)
 - [Contributing](#contributing)
-- [License](#license)
 - [Contact](#contact)
 
-## Features
+[//]: # (## Features)
 
-- **Feature 1:** Detailed explanation of feature 1.
-- **Feature 2:** Detailed explanation of feature 2.
-- **Feature 3:** Detailed explanation of feature 3.
+[//]: # ()
+[//]: # (- **Feature 1:** Detailed explanation of feature 1.)
+
+[//]: # (- **Feature 2:** Detailed explanation of feature 2.)
+
+[//]: # (- **Feature 3:** Detailed explanation of feature 3.)
 
 ## Installation
 
 ### Prerequisites
 
 Before you begin, ensure you have met the following requirements:
+- You have installed Java 17 or higher.
 - You have installed Docker.
 - You have installed Netcat.
 - You have installed Git.
-- You have installed Java 17 or higher.
-- You have a [OS type] machine. [Specify any OS-specific instructions if necessary].
+
+[//]: # (- You have a [OS type] machine. [Specify any OS-specific instructions if necessary].)
 
 ### Steps
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/your-username/project-name.git
+    git clone https://github.com/lumos9/etl-pipeline.git
     ```
 2. Navigate to the project directory:
     ```bash
-    cd project-name
+    cd etl-pipeline
     ```
 3. Set up the pipeline
     ```bash
@@ -65,34 +66,49 @@ To use this project, follow these steps:
     ./start-kafka-prodicer.sh
     ```
 
-Example:
-```bash
-[example command or code snippet]
-```
+[//]: # (Example:)
 
-## Configuration
+[//]: # (```bash)
 
-### Environment Variables
+[//]: # ([example command or code snippet])
 
-This project requires the following environment variables to be set:
+[//]: # (```)
 
-- `ENV_VAR_1`: Description of ENV_VAR_1
-- `ENV_VAR_2`: Description of ENV_VAR_2
+[//]: # (## Configuration)
 
-### Configuration File
+[//]: # ()
+[//]: # (### Environment Variables)
 
-You can configure the project by editing the `config.file` located at `[path to config file]`. Below is an example configuration:
+[//]: # ()
+[//]: # (This project requires the following environment variables to be set:)
 
-```json
-{
-  "config_key_1": "value",
-  "config_key_2": "value"
-}
-```
+[//]: # ()
+[//]: # (- `ENV_VAR_1`: Description of ENV_VAR_1)
+
+[//]: # (- `ENV_VAR_2`: Description of ENV_VAR_2)
+
+[//]: # ()
+[//]: # (### Configuration File)
+
+[//]: # ()
+[//]: # (You can configure the project by editing the `config.file` located at `[path to config file]`. Below is an example configuration:)
+
+[//]: # ()
+[//]: # (```json)
+
+[//]: # ({)
+
+[//]: # (  "config_key_1": "value",)
+
+[//]: # (  "config_key_2": "value")
+
+[//]: # (})
+
+[//]: # (```)
 
 ## Contributing
 
-We welcome contributions! To get started, please read our [Contributing Guidelines](CONTRIBUTING.md).
+We welcome contributions!
 
 ### Reporting Issues
 
@@ -115,22 +131,23 @@ If you encounter any issues, please create a new issue in this repository. Make 
     ```
 5. Open a pull request.
 
-Please ensure your code adheres to our coding standards and includes appropriate tests.
+[//]: # (Please ensure your code adheres to our coding standards and includes appropriate tests.)
 
-## License
+[//]: # (## License)
 
-This project is licensed under the [LICENSE NAME]. See the [LICENSE](LICENSE) file for more details.
+[//]: # ()
+[//]: # (This project is licensed under the [LICENSE NAME]. See the [LICENSE]&#40;LICENSE&#41; file for more details.)
 
 ## Contact
 
-For any inquiries or questions, please contact us at [contact information].
+For any inquiries or questions, please contact me at [contact information].
 
 ---
 
-Thank you for checking out **Project Name**! We hope you find it useful and engaging. Happy coding!
+Thank you for checking out **ETL Pipeline**! We hope you find it useful and engaging. Happy coding!
 
-[Optional: Include any acknowledgments or credits here]
+[//]: # ([Optional: Include any acknowledgments or credits here])
 
 ---
 
-*Note: Replace placeholders with actual information relevant to your project.*
+[//]: # (*Note: Replace placeholders with actual information relevant to your project.*)
