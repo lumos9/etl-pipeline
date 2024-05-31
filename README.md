@@ -64,7 +64,7 @@ To use this project, follow these steps:
     ```
 2. Start the Kafka Producer in another shell:
     ```bash
-    ./start-kafka-prodicer.sh
+    ./start-kafka-producer.sh
     ```
 
 [//]: # (Example:)
