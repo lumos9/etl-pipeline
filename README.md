@@ -1,7 +1,7 @@
 # ETL Pipeline
-## Kafka Source - Flink Transformations - Postgres Sink
 
 ## Overview
+Kafka Source - Flink Transformations - Postgres Sink
 
 Welcome to the **ETL Pipeline** repository. This experimental project is designed to load a Apache Kafka stream of large dataset csv records to a JDBC sink (Postgres) via Apache Flink while applying minor transformations. It is built with Java 17, Gradle and Docker, aiming to provide a template code-base for ETL pipelines with large datasets via low latency streaming. This takes full advantage of local machine's resources and convenient for Proof-Of-Concept demos, learning, experimentation etc.
 
