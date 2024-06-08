@@ -49,7 +49,7 @@ public class KafkaProducerExample {
         }
 
         // Number of records to produce
-        int numRecords = 1_000_000;
+        int numRecords = 10_000;
         int print_limit = 1000;
         final int[] limit = {0};
         AtomicInteger total = new AtomicInteger();
@@ -82,12 +82,13 @@ public class KafkaProducerExample {
                             if(messagesPerSecond > maxRecordsPerSec[0]) {
                                 maxRecordsPerSec[0] = messagesPerSecond;
                             }
-                            if(minRecordsPerSec[0] == 0 || messagesPerSecond < minRecordsPerSec[0]) {
+                            if(minRecordsPerSec[0] == 0 || minRecordsPerSec[0] < messagesPerSecond) {
                                 minRecordsPerSec[0] = messagesPerSecond;
                             }
                             batchStart[0] = System.nanoTime();
                             logger.info("{} messages produced in {} seconds. Rate: {} messages/sec. Total: {}",
-                                    limit[0], String.format("%.3f", seconds), String.format("%.3f", messagesPerSecond), currentCount);
+                                    limit[0], String.format("%.3f", seconds),
+                                    String.format("%.3f", messagesPerSecond), currentCount);
 
                             limit[0] = 0;
                         }
@@ -116,7 +117,7 @@ public class KafkaProducerExample {
             if(messagesPerSecond > maxRecordsPerSec[0]) {
                 maxRecordsPerSec[0] = messagesPerSecond;
             }
-            if(minRecordsPerSec[0] == 0 || messagesPerSecond < minRecordsPerSec[0]) {
+            if(minRecordsPerSec[0] == 0 || minRecordsPerSec[0] < messagesPerSecond) {
                 minRecordsPerSec[0] = messagesPerSecond;
             }
             batchStart[0] = System.nanoTime();
@@ -124,7 +125,8 @@ public class KafkaProducerExample {
                     limit[0], String.format("%.3f", seconds), String.format("%.3f", messagesPerSecond), currentCount);
         }
 
-        logger.info("Max Rate: {} messages/sec and Min Rate: {} messages/sec", maxRecordsPerSec[0], minRecordsPerSec[0]);
+        logger.info("Max Rate: {} messages/sec and Min Rate: {} messages/sec",
+                String.format("%.3f", maxRecordsPerSec[0]), String.format("%.3f", minRecordsPerSec[0]));
 
         try {
             // Send the shutdown signal
