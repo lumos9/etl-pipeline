@@ -82,7 +82,7 @@ public class KafkaProducerExample {
                             if(messagesPerSecond > maxRecordsPerSec[0]) {
                                 maxRecordsPerSec[0] = messagesPerSecond;
                             }
-                            if(messagesPerSecond < minRecordsPerSec[0]) {
+                            if(minRecordsPerSec[0] == 0 || messagesPerSecond < minRecordsPerSec[0]) {
                                 minRecordsPerSec[0] = messagesPerSecond;
                             }
                             batchStart[0] = System.nanoTime();
@@ -116,7 +116,7 @@ public class KafkaProducerExample {
             if(messagesPerSecond > maxRecordsPerSec[0]) {
                 maxRecordsPerSec[0] = messagesPerSecond;
             }
-            if(messagesPerSecond < minRecordsPerSec[0]) {
+            if(minRecordsPerSec[0] == 0 || messagesPerSecond < minRecordsPerSec[0]) {
                 minRecordsPerSec[0] = messagesPerSecond;
             }
             batchStart[0] = System.nanoTime();

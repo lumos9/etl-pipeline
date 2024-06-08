@@ -168,7 +168,7 @@ If you encounter any issues, please create a new issue in this repository. Make 
 
 ## Contact
 
-For any inquiries or questions, please contact me at [contact information].
+For any inquiries or questions, please [Contact me](mailto:nchat.dev@proton.me)
 
 [//]: # (---)
 
