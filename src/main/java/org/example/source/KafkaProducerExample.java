@@ -18,9 +18,11 @@ public class KafkaProducerExample {
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         props.put(ProducerConfig.CLIENT_ID_CONFIG, "csv-producer");
+        props.put(ProducerConfig.ACKS_CONFIG, "all");
+        props.put(ProducerConfig.RETRIES_CONFIG, "0");
         props.put(ProducerConfig.BATCH_SIZE_CONFIG, 100000);  // Batch size in bytes
-        props.put(ProducerConfig.LINGER_MS_CONFIG, 1000);  // Buffering time in milliseconds
-        props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 1048576);  // Buffer size in bytes
+        props.put(ProducerConfig.LINGER_MS_CONFIG, 5);  // Buffering time in milliseconds
+        props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);  // Buffer size in bytes
         props.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 1000);  // Maximum time to block
         props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "gzip");  // Compression type
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
@@ -53,6 +55,10 @@ public class KafkaProducerExample {
         AtomicInteger total = new AtomicInteger();
 
         long start = System.nanoTime();
+        final long[] batchStart = {System.nanoTime()};  // Time measurement for the current batch
+        final double[] maxRecordsPerSec = {0};
+        final double[] minRecordsPerSec = {0};
+
         // Produce records
         for (int i = 1; i <= numRecords; i++) {
             String record = i + "," + System.currentTimeMillis() + ",name_" + i + ",value_" + i;
@@ -69,7 +75,20 @@ public class KafkaProducerExample {
                         //logger.info("Message produced: {}", metadata.toString());
                         if(limit[0] == print_limit) {
                             int currentCount = total.addAndGet(limit[0]);
-                            logger.info("{} messages produced. Total: {}", limit[0], currentCount);
+                            long batchEnd = System.nanoTime();
+                            long batchTime = batchEnd - batchStart[0];
+                            double seconds = batchTime / 1_000_000_000.0;
+                            double messagesPerSecond = limit[0] / seconds;
+                            if(messagesPerSecond > maxRecordsPerSec[0]) {
+                                maxRecordsPerSec[0] = messagesPerSecond;
+                            }
+                            if(messagesPerSecond < minRecordsPerSec[0]) {
+                                minRecordsPerSec[0] = messagesPerSecond;
+                            }
+                            batchStart[0] = System.nanoTime();
+                            logger.info("{} messages produced in {} seconds. Rate: {} messages/sec. Total: {}",
+                                    limit[0], String.format("%.3f", seconds), String.format("%.3f", messagesPerSecond), currentCount);
+
                             limit[0] = 0;
                         }
                     }
@@ -88,10 +107,24 @@ public class KafkaProducerExample {
 
         logger.info("data sent in {}", JDBCSink.getHumanReadableTimeDifference(start, System.nanoTime()));
 
-        if(limit[0] > 0) {
+        if (limit[0] > 0) {
             int currentCount = total.addAndGet(limit[0]);
-            logger.info("last batch: {} messages produced. Total: {}", limit[0], currentCount);
+            long batchEnd = System.nanoTime();
+            long batchTime = batchEnd - batchStart[0];
+            double seconds = batchTime / 1_000_000_000.0;
+            double messagesPerSecond = limit[0] / seconds;
+            if(messagesPerSecond > maxRecordsPerSec[0]) {
+                maxRecordsPerSec[0] = messagesPerSecond;
+            }
+            if(messagesPerSecond < minRecordsPerSec[0]) {
+                minRecordsPerSec[0] = messagesPerSecond;
+            }
+            batchStart[0] = System.nanoTime();
+            logger.info("last batch: {} messages produced in {} seconds. Rate: {} messages/sec. Total: {}",
+                    limit[0], String.format("%.3f", seconds), String.format("%.3f", messagesPerSecond), currentCount);
         }
+
+        logger.info("Max Rate: {} messages/sec and Min Rate: {} messages/sec", maxRecordsPerSec[0], minRecordsPerSec[0]);
 
         try {
             // Send the shutdown signal
