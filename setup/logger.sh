@@ -60,6 +60,40 @@ run_command() {
     fi
 }
 
+# Function to run commands with error checking and timestamped output
+run_command_ignore_exit_status() {
+    local command="$@"
+    info "Running command: '$command'"
+
+    # Capture the command output with timestamp
+#    while IFS= read -r line; do
+#        output_with_timestamp "\t${NC}$line${NC}"
+#    done < <($command)
+
+    {
+        eval "$command" 2>&1
+        echo $? > /tmp/command_exit_status
+    } | while IFS= read -r line; do
+         output_with_timestamp "\t${NC}$line${NC}"
+    done
+
+    # Get the exit code of the command
+#    EXIT_CODE=${PIPESTATUS[0]}
+#    if [ "$EXIT_CODE" -ne 0 ]; then
+#        error "Command '$command' failed with exit code '$EXIT_CODE'"
+#        exit "$EXIT_CODE"
+#    fi
+
+    # Get the exit code of the command
+    EXIT_CODE=$(cat /tmp/command_exit_status)
+    rm /tmp/command_exit_status
+
+#    if [ "$EXIT_CODE" -ne 0 ]; then
+#        error "Command '$command' failed with exit code '$EXIT_CODE'"
+#        exit "$EXIT_CODE"
+#    fi
+}
+
 
 output_with_timestamp() {
   echo -e "$(timestamp) | ${NC}OUTPUT${NC} | ${NC}$1${NC}"

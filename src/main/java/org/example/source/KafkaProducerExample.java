@@ -47,7 +47,7 @@ public class KafkaProducerExample {
         }
 
         // Number of records to produce
-        int numRecords = 100_000;
+        int numRecords = 1_000_000;
         int print_limit = 1000;
         final int[] limit = {0};
         AtomicInteger total = new AtomicInteger();

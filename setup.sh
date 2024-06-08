@@ -106,18 +106,16 @@ then
     # Start the services
     run_command docker-compose -f $COMPOSE_FILE up -d --remove-orphans
     # Check the status of the services
-    status=$(docker-compose -f $COMPOSE_FILE ps)
-    info "Waiting for 5 secs to initiate Kafka services..."
-    countdown 5
-    # shellcheck disable=SC2181
-    if [ $? -eq 0 ]; then
+    compose_output=$(docker-compose -f $COMPOSE_FILE ps)
+    compose_status=$?
+    if [ $compose_status -eq 0 ]; then
         info "All services are successfully initiated."
     else
         error "services failed to start."
-        error "$status"
+        error "$compose_output"
         exit 1
     fi
-    info "Waiting for 1 minute to load Kafka services..."
+    info "Waiting for a minute to load Kafka services..."
     countdown 60
 fi
 
@@ -145,7 +143,10 @@ delete_topic_if_exists() {
     fi
 }
 
-kafka_container=$(docker exec -it "$docker_ps_output" sh -c 'nc -zv localhost 9092 2>&1')
+docker_ps_output=$(docker ps --filter "publish=9092" --format "{{.Names}}")
+info "Checking the status of '$docker_ps_output' container.."
+
+kafka_container=$(docker exec -it "$docker_ps_output" bash -c 'nc -zv localhost 9092 2>&1')
 if [[ "$kafka_container" == *"succeeded"* || "$kafka_container" == *"Connected to"* ]]
 then
     info "Kafka broker is up and running on localhost:9092 in container: $docker_ps_output"
@@ -154,13 +155,14 @@ else
     warn "Kafka broker is not accessible on localhost:9092 in the Docker container.."
     info "Waiting for another minute to load Kafka services..."
     countdown 60
-    kafka_container=$(docker exec -it "$docker_ps_output" sh -c 'nc -zv localhost 9092 2>&1')
+    kafka_container=$(docker exec -it "$docker_ps_output" bash -c 'nc -zv localhost 9092 2>&1')
     if [[ "$kafka_container" == *"succeeded"* || "$kafka_container" == *"Connected to"* ]]
     then
         info "Kafka broker is up and running on localhost:9092 in container: $docker_ps_output"
         delete_topic_if_exists $TOPIC_NAME
     else
         error "Something went wrong launching Confluence kafka via docker container"
+        error "${kafka_container}"
         exit 1
     fi
 fi
@@ -184,10 +186,10 @@ info "Setting up local postgres db.."
 mkdir -p local_db
 
 info "Stopping existing postgres container 'local_postgres'.."
-run_command docker stop local_postgres
+run_command_ignore_exit_status docker stop local_postgres
 
 info "Deleting existing postgres container 'local_postgres'.."
-run_command docker rm local_postgres
+run_command_ignore_exit_status docker rm local_postgres
 
 COMPOSE_FILE="setup/postgres/postgres-docker-compose.yml"
 run_command docker-compose -f $COMPOSE_FILE up -d
