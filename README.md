@@ -3,7 +3,7 @@
 ## Overview
 Kafka Source - Flink Transformations - Postgres Sink
 
-Welcome to the **ETL Pipeline** repository. This experimental project is designed to load a real-time Apache Kafka stream of large dataset csv records (Test data of 100K records for demo) to a JDBC sink (Postgres) via Apache Flink while applying minor transformations. It is built with Java 17, Gradle and Docker, aiming to provide a template code-base for ETL pipelines with large datasets via low latency streaming (some Use Cases listed below). This takes full advantage of local machine's resources and convenient for Proof-Of-Concept demos, learning, experimentation etc.
+Welcome to the **ETL Pipeline** repository. This experimental project is designed to load a real-time Apache Kafka stream of large dataset csv records (Test data of 1,000,000 (1 million) records for demo) to a JDBC sink (Postgres) via Apache Flink while applying minor transformations. It is built with Java 17, Gradle and Docker, aiming to provide a template code-base for ETL pipelines with large datasets via low latency streaming (some Use Cases listed below). This takes full advantage of local machine's resources and convenient for Proof-Of-Concept demos, learning, experimentation etc.
 
 [//]: # ([Optional: Include a screenshot or a gif of the project])
 
@@ -43,7 +43,7 @@ Welcome to the **ETL Pipeline** repository. This experimental project is designe
 3. **Enhanced Parser Support** - Extend support to various data formats such as CSV, TSV, Delimited, JSON, and XML, including efficient handling of large datasets during parsing.
 4. **On-the-Fly Lookup Support** - Implement on-the-fly lookups to fetch required identifiers and metadata from the database dynamically during stream processing.
 5. **Advanced Caching Mechanisms** - Introduce multiple layers of caching to optimize the performance of data transformations and mappings, reducing latency and improving throughput.
-6. **Multi-Stream and Multi-Topic Support** - Enable the application to handle multiple Kafka topics and streams concurrently, maximizing resource utilization and scaling to accommodate billions of records per second.
+6. **Multi-Stream and Multi-Topic Support** - Enable the application to handle multiple Kafka topics and streams concurrently, maximizing resource utilization and scaling to process billions of records.
 7. **Dynamic Resource Allocation** - Develop a dynamic resource allocation system that scales processing resources up or down based on the workload to ensure efficient resource use and cost management.
 8. **Real-Time Anomaly Detection** - Incorporate machine learning models for real-time anomaly detection to identify and respond to unusual patterns and behaviors instantly.
 9. **Comprehensive Monitoring and Alerting** - Implement a comprehensive monitoring and alerting system to track the health and performance of the entire data pipeline, ensuring quick detection and resolution of issues.
