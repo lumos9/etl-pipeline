@@ -7,13 +7,6 @@ Welcome to the **ETL Pipeline** repository. This experimental project is designe
 
 [//]: # ([Optional: Include a screenshot or a gif of the project])
 
-## Demo Video
-
-<video width="600" controls>
-  <source src="assets/video.webm" type="video/webm">
-  Your browser does not support the video tag.
-</video>
-
 ## Table of Contents
 
 - [Real-World Use Cases](#real-world-use-cases)
